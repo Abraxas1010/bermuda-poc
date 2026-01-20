@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <defs>
+    <linearGradient id="dagBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="100%" style="stop-color:#000000"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#dagBgGrad)"/>
+
+  <!-- Title -->
+  <text x="300" y="28" text-anchor="middle" fill="#fafafa" font-size="14" font-family="sans-serif" font-weight="600">Proof Term DAG</text>
+  <text x="300" y="46" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="sans-serif">withdraw_ok_preconditions theorem</text>
+
+  <!-- Edges -->
+  <g stroke="rgba(255,255,255,0.3)" stroke-width="1.5" fill="none">
+    <path d="M300 85 C300 105, 300 105, 300 125"/>
+    <path d="M300 160 C300 180, 250 180, 250 200"/>
+    <path d="M300 160 C300 180, 350 180, 350 200"/>
+    <path d="M250 235 C250 255, 200 255, 200 275"/>
+    <path d="M250 235 C250 255, 250 255, 250 275"/>
+    <path d="M350 235 C350 255, 350 255, 350 275"/>
+    <path d="M350 235 C350 255, 400 255, 400 275"/>
+    <path d="M200 310 C200 330, 200 330, 200 350"/>
+  </g>
+
+  <!-- Level 0: Root lambda -->
+  <g transform="translate(220, 55)">
+    <polygon points="80,0 160,15 80,30 0,15" fill="#8b5cf6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="80" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">fun env s s' w h =></text>
+  </g>
+
+  <!-- Level 1: by_cases -->
+  <g transform="translate(220, 125)">
+    <rect width="160" height="30" rx="6" fill="#3b82f6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="80" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">Classical.byCases</text>
+  </g>
+
+  <!-- Level 2: branches -->
+  <g transform="translate(160, 200)">
+    <polygon points="55,0 110,15 55,30 0,15" fill="#8b5cf6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="55" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">hLic =></text>
+  </g>
+  <g transform="translate(290, 200)">
+    <polygon points="55,0 110,15 55,30 0,15" fill="#8b5cf6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="55" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">hKyc =></text>
+  </g>
+
+  <!-- Level 3: nested -->
+  <g transform="translate(110, 275)">
+    <polygon points="55,0 110,15 55,30 0,15" fill="#8b5cf6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="55" y="19" text-anchor="middle" fill="#fafafa" font-size="9" font-family="monospace">hComp =></text>
+  </g>
+  <g transform="translate(190, 275)">
+    <rect width="100" height="28" rx="6" fill="#3b82f6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="50" y="18" text-anchor="middle" fill="#fafafa" font-size="9" font-family="monospace">And.intro</text>
+  </g>
+  <g transform="translate(300, 275)">
+    <rect width="100" height="28" rx="6" fill="#3b82f6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="50" y="18" text-anchor="middle" fill="#fafafa" font-size="9" font-family="monospace">absurd</text>
+  </g>
+  <g transform="translate(410, 275)">
+    <rect width="100" height="28" rx="6" fill="#3b82f6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="50" y="18" text-anchor="middle" fill="#fafafa" font-size="9" font-family="monospace">simp result</text>
+  </g>
+
+  <!-- Level 4: final -->
+  <g transform="translate(140, 350)">
+    <rect width="120" height="28" rx="6" fill="#f59e0b" stroke="rgba(255,255,255,0.2)"/>
+    <text x="60" y="18" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">⟨hLic, ...⟩</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(20, 360)">
+    <rect x="0" y="0" width="14" height="10" rx="2" fill="#3b82f6"/>
+    <text x="20" y="9" fill="#9ca3af" font-size="10" font-family="sans-serif">App</text>
+    <polygon points="70,5 77,0 84,5 77,10" fill="#8b5cf6"/>
+    <text x="90" y="9" fill="#9ca3af" font-size="10" font-family="sans-serif">Lambda</text>
+    <rect x="140" y="0" width="14" height="10" rx="2" fill="#f59e0b"/>
+    <text x="160" y="9" fill="#9ca3af" font-size="10" font-family="sans-serif">Const</text>
+  </g>
+</svg>

@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <defs>
+    <linearGradient id="tfBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="100%" style="stop-color:#000000"/>
+    </linearGradient>
+    <marker id="arrowPreview" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="rgba(255,255,255,0.4)"/>
+    </marker>
+  </defs>
+  <rect width="600" height="400" fill="url(#tfBgGrad)"/>
+
+  <!-- Title -->
+  <text x="300" y="28" text-anchor="middle" fill="#fafafa" font-size="14" font-family="sans-serif" font-weight="600">Tactic Flow Graph</text>
+  <text x="300" y="46" text-anchor="middle" fill="#9ca3af" font-size="11" font-family="sans-serif">withdraw_ok_preconditions theorem</text>
+
+  <!-- Edges -->
+  <g stroke="rgba(255,255,255,0.3)" stroke-width="1.5" fill="none" marker-end="url(#arrowPreview)">
+    <path d="M300 85 L300 120"/>
+    <path d="M300 155 L300 190"/>
+    <path d="M300 225 L300 260"/>
+    <path d="M300 295 L200 330"/>
+    <path d="M300 295 L400 330"/>
+  </g>
+
+  <!-- Level 0: Goal -->
+  <g transform="translate(200, 55)">
+    <rect width="200" height="30" rx="6" fill="#3b82f6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="100" y="19" text-anchor="middle" fill="#fafafa" font-size="11" font-family="monospace">goal: preconditions hold</text>
+  </g>
+
+  <!-- Level 1: classical -->
+  <g transform="translate(200, 120)">
+    <rect width="200" height="30" rx="6" fill="#f59e0b" stroke="rgba(255,255,255,0.2)"/>
+    <text x="100" y="19" text-anchor="middle" fill="#fafafa" font-size="11" font-family="monospace">classical</text>
+  </g>
+
+  <!-- Level 2: by_cases chain -->
+  <g transform="translate(200, 190)">
+    <rect width="200" height="30" rx="6" fill="#f59e0b" stroke="rgba(255,255,255,0.2)"/>
+    <text x="100" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">by_cases hLic, hKyc, ...</text>
+  </g>
+
+  <!-- Level 3: final case -->
+  <g transform="translate(200, 260)">
+    <rect width="200" height="30" rx="6" fill="#f59e0b" stroke="rgba(255,255,255,0.2)"/>
+    <text x="100" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">by_cases hComp</text>
+  </g>
+
+  <!-- Level 4: branches -->
+  <g transform="translate(100, 330)">
+    <rect width="160" height="30" rx="6" fill="#10b981" stroke="rgba(255,255,255,0.2)"/>
+    <text x="80" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">exact ⟨hLic, ...⟩</text>
+  </g>
+  <g transform="translate(340, 330)">
+    <rect width="160" height="30" rx="6" fill="#8b5cf6" stroke="rgba(255,255,255,0.2)"/>
+    <text x="80" y="19" text-anchor="middle" fill="#fafafa" font-size="10" font-family="monospace">simp (contradiction)</text>
+  </g>
+
+  <!-- Legend -->
+  <g transform="translate(20, 370)">
+    <rect x="0" y="0" width="12" height="12" rx="2" fill="#3b82f6"/>
+    <text x="18" y="10" fill="#9ca3af" font-size="10" font-family="sans-serif">Goal</text>
+    <rect x="60" y="0" width="12" height="12" rx="2" fill="#f59e0b"/>
+    <text x="78" y="10" fill="#9ca3af" font-size="10" font-family="sans-serif">Tactic</text>
+    <rect x="130" y="0" width="12" height="12" rx="2" fill="#8b5cf6"/>
+    <text x="148" y="10" fill="#9ca3af" font-size="10" font-family="sans-serif">Simp</text>
+    <rect x="190" y="0" width="12" height="12" rx="2" fill="#10b981"/>
+    <text x="208" y="10" fill="#9ca3af" font-size="10" font-family="sans-serif">QED</text>
+  </g>
+</svg>

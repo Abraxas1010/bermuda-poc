@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bermuda POC - Proof Term DAG</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --card: #0a0a0a;
+      --border: rgba(255,255,255,0.1);
+      --text: #fafafa;
+      --dim: #9ca3af;
+      --accent: #60a5fa;
+      --app: #3b82f6;
+      --lam: #8b5cf6;
+      --var: #22c55e;
+      --const: #f59e0b;
+      --eq: #06b6d4;
+      --calc: #14b8a6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 100;
+    }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .header .subtitle { color: var(--dim); margin-left: 12px; font-size: 14px; }
+    .zoom-controls {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+    .zoom-controls button {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .zoom-controls button:hover { background: rgba(255,255,255,0.1); }
+    .sidebar {
+      position: fixed;
+      top: 60px;
+      left: 0;
+      width: 280px;
+      bottom: 0;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+    .sidebar h2 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 16px 16px 8px;
+    }
+    .theorem-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .theorem-item:hover { background: rgba(255,255,255,0.05); }
+    .theorem-item.active { background: rgba(96,165,250,0.15); border-left: 3px solid var(--accent); }
+    .theorem-item .name { font-weight: 500; font-size: 14px; }
+    .theorem-item .file { color: var(--dim); font-size: 12px; margin-top: 2px; }
+    .graph-container {
+      position: fixed;
+      top: 60px;
+      left: 280px;
+      right: 300px;
+      bottom: 0;
+      overflow: auto;
+      padding: 40px;
+    }
+    .info-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .info-bar .theorem-name { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .info-bar .description { color: var(--dim); font-size: 14px; margin-bottom: 8px; }
+    .info-bar .statement {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: rgba(255,255,255,0.05);
+      padding: 8px 12px;
+      border-radius: 4px;
+    }
+    svg { width: 100%; overflow: visible; }
+    .node { cursor: pointer; }
+    .node-shape {
+      transition: filter 0.15s, stroke-width 0.15s;
+    }
+    .node:hover .node-shape {
+      filter: brightness(1.2);
+      stroke-width: 3;
+    }
+    .node.selected .node-shape {
+      stroke: #fff;
+      stroke-width: 3;
+    }
+    .node-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      fill: var(--text);
+      pointer-events: none;
+    }
+    .edge {
+      stroke: rgba(255,255,255,0.3);
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .detail-panel {
+      position: fixed;
+      top: 60px;
+      right: 0;
+      width: 300px;
+      bottom: 0;
+      background: var(--card);
+      border-left: 1px solid var(--border);
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .detail-panel h2 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .detail-panel .empty {
+      color: var(--dim);
+      font-size: 14px;
+      font-style: italic;
+    }
+    .detail-panel .node-detail {
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .detail-panel .node-type {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .detail-panel .node-content {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .legend {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .legend h3 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .legend-shape {
+      width: 20px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .legend-rect { width: 16px; height: 12px; border-radius: 2px; }
+    .legend-diamond { width: 12px; height: 12px; transform: rotate(45deg); }
+    .legend-ellipse { width: 16px; height: 10px; border-radius: 50%; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Bermuda POC</h1>
+    <span class="subtitle">Proof Term DAG</span>
+    <div class="zoom-controls">
+      <button onclick="zoomIn()">+</button>
+      <button onclick="zoomOut()">-</button>
+      <button onclick="resetZoom()">Reset</button>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <h2>Theorems</h2>
+    <div id="theorem-list"></div>
+  </div>
+
+  <div class="graph-container">
+    <div class="info-bar">
+      <div class="theorem-name" id="info-name">Select a theorem</div>
+      <div class="description" id="info-desc">Click a theorem from the sidebar to view its proof term structure.</div>
+      <div class="statement" id="info-stmt"></div>
+    </div>
+    <svg id="graph"></svg>
+  </div>
+
+  <div class="detail-panel">
+    <h2>Term Detail</h2>
+    <div id="detail-content">
+      <div class="empty">Click a node to see details</div>
+    </div>
+    <div class="legend">
+      <h3>Legend</h3>
+      <div class="legend-item">
+        <div class="legend-shape"><div class="legend-rect" style="background:var(--app)"></div></div>
+        Application
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape"><div class="legend-diamond" style="background:var(--lam)"></div></div>
+        Lambda
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape"><div class="legend-ellipse" style="background:var(--var)"></div></div>
+        Variable
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape"><div class="legend-rect" style="background:var(--const)"></div></div>
+        Constant
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape"><div class="legend-rect" style="background:var(--eq)"></div></div>
+        Equality
+      </div>
+      <div class="legend-item">
+        <div class="legend-shape"><div class="legend-rect" style="background:var(--calc)"></div></div>
+        Calc Block
+      </div>
+    </div>
+  </div>
+
+  <script src="proof_term_data.js"></script>
+  <script>
+    const nodeColors = {
+      app: '#3b82f6',
+      lam: '#8b5cf6',
+      var: '#22c55e',
+      const: '#f59e0b',
+      eq: '#06b6d4',
+      calc: '#14b8a6'
+    };
+
+    let zoom = 1;
+    let selectedNode = null;
+    let currentTheorem = null;
+
+    function zoomIn() { zoom = Math.min(2, zoom * 1.2); updateZoom(); }
+    function zoomOut() { zoom = Math.max(0.5, zoom / 1.2); updateZoom(); }
+    function resetZoom() { zoom = 1; updateZoom(); }
+    function updateZoom() {
+      document.getElementById('graph').style.transform = `scale(${zoom})`;
+      document.getElementById('graph').style.transformOrigin = 'top left';
+    }
+
+    function buildTheoremList() {
+      const list = document.getElementById('theorem-list');
+      proofTermData.theorems.forEach((thm, i) => {
+        const div = document.createElement('div');
+        div.className = 'theorem-item' + (i === 0 ? ' active' : '');
+        div.innerHTML = `<div class="name">${thm.name}</div><div class="file">${thm.file}</div>`;
+        div.addEventListener('click', () => selectTheorem(i));
+        list.appendChild(div);
+      });
+    }
+
+    function selectTheorem(index) {
+      document.querySelectorAll('.theorem-item').forEach((el, i) => {
+        el.classList.toggle('active', i === index);
+      });
+
+      currentTheorem = proofTermData.theorems[index];
+      document.getElementById('info-name').textContent = currentTheorem.name;
+      document.getElementById('info-desc').textContent = currentTheorem.description;
+      document.getElementById('info-stmt').textContent = currentTheorem.statement;
+
+      selectedNode = null;
+      document.getElementById('detail-content').innerHTML = '<div class="empty">Click a node to see details</div>';
+
+      renderGraph(currentTheorem);
+    }
+
+    function renderGraph(thm) {
+      const svg = document.getElementById('graph');
+      svg.innerHTML = '';
+
+      const nodeWidth = 160;
+      const nodeHeight = 28;
+      const levelGap = 70;
+      const nodeGap = 20;
+
+      // Group by depth
+      const levels = {};
+      thm.nodes.forEach(node => {
+        if (!levels[node.depth]) levels[node.depth] = [];
+        levels[node.depth].push(node);
+      });
+
+      // Calculate positions
+      const positions = {};
+      Object.keys(levels).sort((a, b) => a - b).forEach(depth => {
+        const nodes = levels[depth];
+        const levelWidth = nodes.length * (nodeWidth + nodeGap) - nodeGap;
+        const startX = (700 - levelWidth) / 2;
+        nodes.forEach((node, i) => {
+          positions[node.id] = {
+            x: startX + i * (nodeWidth + nodeGap),
+            y: parseInt(depth) * levelGap + 20
+          };
+        });
+      });
+
+      const maxDepth = Math.max(...Object.keys(levels).map(Number));
+      svg.setAttribute('viewBox', `0 0 700 ${(maxDepth + 1) * levelGap + 40}`);
+      svg.style.height = ((maxDepth + 1) * levelGap + 40) + 'px';
+
+      // Draw edges
+      thm.edges.forEach(edge => {
+        const from = positions[edge.from];
+        const to = positions[edge.to];
+        if (!from || !to) return;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const fromX = from.x + nodeWidth / 2;
+        const fromY = from.y + nodeHeight;
+        const toX = to.x + nodeWidth / 2;
+        const toY = to.y;
+
+        const midY = (fromY + toY) / 2;
+        path.setAttribute('d', `M ${fromX} ${fromY} C ${fromX} ${midY}, ${toX} ${midY}, ${toX} ${toY}`);
+        path.setAttribute('class', 'edge');
+        svg.appendChild(path);
+      });
+
+      // Draw nodes
+      thm.nodes.forEach(node => {
+        const pos = positions[node.id];
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'node');
+        g.setAttribute('data-id', node.id);
+
+        const color = nodeColors[node.type] || '#666';
+
+        if (node.type === 'lam') {
+          // Diamond shape
+          const diamond = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          const cx = pos.x + nodeWidth / 2;
+          const cy = pos.y + nodeHeight / 2;
+          const hw = nodeWidth / 2;
+          const hh = nodeHeight / 2 + 4;
+          diamond.setAttribute('points', `${cx},${cy-hh} ${cx+hw},${cy} ${cx},${cy+hh} ${cx-hw},${cy}`);
+          diamond.setAttribute('class', 'node-shape');
+          diamond.setAttribute('fill', color);
+          diamond.setAttribute('stroke', 'rgba(255,255,255,0.2)');
+          g.appendChild(diamond);
+        } else if (node.type === 'var') {
+          // Ellipse
+          const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+          ellipse.setAttribute('cx', pos.x + nodeWidth / 2);
+          ellipse.setAttribute('cy', pos.y + nodeHeight / 2);
+          ellipse.setAttribute('rx', nodeWidth / 2);
+          ellipse.setAttribute('ry', nodeHeight / 2 + 2);
+          ellipse.setAttribute('class', 'node-shape');
+          ellipse.setAttribute('fill', color);
+          ellipse.setAttribute('stroke', 'rgba(255,255,255,0.2)');
+          g.appendChild(ellipse);
+        } else {
+          // Rectangle
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', pos.x);
+          rect.setAttribute('y', pos.y);
+          rect.setAttribute('width', nodeWidth);
+          rect.setAttribute('height', nodeHeight);
+          rect.setAttribute('rx', 6);
+          rect.setAttribute('class', 'node-shape');
+          rect.setAttribute('fill', color);
+          rect.setAttribute('stroke', 'rgba(255,255,255,0.2)');
+          g.appendChild(rect);
+        }
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('class', 'node-label');
+        text.setAttribute('x', pos.x + nodeWidth / 2);
+        text.setAttribute('y', pos.y + nodeHeight / 2 + 4);
+        text.setAttribute('text-anchor', 'middle');
+        const truncated = node.label.length > 20 ? node.label.substring(0, 17) + '...' : node.label;
+        text.textContent = truncated;
+        g.appendChild(text);
+
+        g.addEventListener('click', () => selectNode(node));
+        svg.appendChild(g);
+      });
+    }
+
+    function selectNode(node) {
+      selectedNode = node;
+      document.querySelectorAll('.node').forEach(el => {
+        el.classList.toggle('selected', el.dataset.id === node.id);
+      });
+
+      const color = nodeColors[node.type] || '#666';
+      document.getElementById('detail-content').innerHTML = `
+        <div class="node-detail">
+          <div class="node-type" style="background:${color}">${node.type}</div>
+          <div class="node-content">${node.label}</div>
+        </div>
+      `;
+    }
+
+    buildTheoremList();
+    if (proofTermData.theorems.length > 0) {
+      selectTheorem(0);
+    }
+  </script>
+</body>
+</html>

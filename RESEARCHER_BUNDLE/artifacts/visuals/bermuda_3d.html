@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bermuda POC - 3D Proof Map</title>
+  <style>
+    :root { --bg: #000000; --card: #0a0a0a; --border: rgba(255,255,255,0.1); --text: #fafafa; --dim: #9ca3af; --accent: #60a5fa; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow: hidden; }
+    .header { position: fixed; top: 0; left: 0; right: 0; height: 60px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; z-index: 100; }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .header .subtitle { color: var(--dim); margin-left: 12px; font-size: 14px; }
+    .search-box { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .search-box input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; color: var(--text); width: 200px; font-size: 14px; }
+    .search-box input:focus { outline: none; border-color: var(--accent); }
+    .canvas-container { position: fixed; top: 60px; left: 0; right: 250px; bottom: 0; }
+    canvas { width: 100%; height: 100%; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+    .sidebar { position: fixed; top: 60px; right: 0; width: 250px; bottom: 0; background: var(--card); border-left: 1px solid var(--border); padding: 16px; overflow-y: auto; }
+    .sidebar h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 4px; }
+    .legend-item:hover { background: rgba(255,255,255,0.05); }
+    .legend-item.inactive { opacity: 0.3; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .stats { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .stat-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
+    .stat-label { color: var(--dim); }
+    .stat-value { font-weight: 500; }
+    .tooltip { position: fixed; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 13px; pointer-events: none; z-index: 200; display: none; max-width: 300px; }
+    .tooltip-name { font-weight: 600; margin-bottom: 4px; }
+    .tooltip-kind { color: var(--dim); font-size: 12px; }
+    .tooltip-family { color: var(--accent); font-size: 12px; margin-top: 2px; }
+    .controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 8px; }
+    .controls button { background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 8px 12px; cursor: pointer; font-size: 13px; }
+    .controls button:hover { background: rgba(255,255,255,0.1); }
+    .controls button.active { background: var(--accent); color: #000; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Bermuda POC Proofs</h1>
+    <span class="subtitle">3D UMAP Projection</span>
+    <div class="search-box"><input type="text" id="search" placeholder="Search declarations..."></div>
+  </div>
+  <div class="canvas-container"><canvas id="canvas"></canvas></div>
+  <div class="sidebar">
+    <h2>Modules</h2>
+    <div id="legend"></div>
+    <div class="stats">
+      <h2>Statistics</h2>
+      <div class="stat-row"><span class="stat-label">Declarations</span><span class="stat-value" id="stat-decls">0</span></div>
+      <div class="stat-row"><span class="stat-label">Dependencies</span><span class="stat-value" id="stat-edges">0</span></div>
+      <div class="stat-row"><span class="stat-label">Modules</span><span class="stat-value" id="stat-modules">0</span></div>
+    </div>
+  </div>
+  <div class="controls">
+    <button onclick="resetView()">Reset View</button>
+    <button onclick="toggleEdges()">Toggle Edges</button>
+    <button id="autoRotateBtn" onclick="toggleAutoRotate()">Auto Rotate</button>
+  </div>
+  <div class="tooltip" id="tooltip">
+    <div class="tooltip-name"></div>
+    <div class="tooltip-kind"></div>
+    <div class="tooltip-family"></div>
+  </div>
+  <script src="bermuda_proofs_data.js"></script>
+  <script>
+    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), tooltip = document.getElementById('tooltip');
+    let rotationX = 0.3, rotationY = 0.5, zoom = 1, isDragging = false, lastX = 0, lastY = 0;
+    let showEdges = true, autoRotate = false, activeFilters = new Set(Object.keys(colors)), searchTerm = '', hoveredNode = null;
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio; canvas.height = rect.height * window.devicePixelRatio;
+      canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px';
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio); draw();
+    }
+
+    function project(x, y, z) {
+      const cx = x - 0.5, cy = y - 0.5, cz = z - 0.5;
+      const cosY = Math.cos(rotationY), sinY = Math.sin(rotationY), rx = cx * cosY - cz * sinY, rz = cx * sinY + cz * cosY;
+      const cosX = Math.cos(rotationX), sinX = Math.sin(rotationX), ry = cy * cosX - rz * sinX, fz = cy * sinX + rz * cosX;
+      const perspective = 2, scale = perspective / (perspective + fz);
+      const rect = canvas.getBoundingClientRect(), size = Math.min(rect.width, rect.height) * 0.7 * zoom;
+      return { x: rect.width / 2 + rx * size * scale, y: rect.height / 2 + ry * size * scale, z: fz, scale };
+    }
+
+    function draw() {
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      const items = bermudaProofsData.items, edges = bermudaProofsData.edges;
+      const projected = items.map((item, i) => ({ ...project(item.pos.x, item.pos.y, item.pos.z), item, index: i })).sort((a, b) => a.z - b.z);
+      if (showEdges) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+        edges.forEach(([from, to]) => {
+          const fi = items[from], ti = items[to];
+          if (!activeFilters.has(fi.family) || !activeFilters.has(ti.family)) return;
+          const p1 = project(fi.pos.x, fi.pos.y, fi.pos.z), p2 = project(ti.pos.x, ti.pos.y, ti.pos.z);
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+        });
+      }
+      projected.forEach(p => {
+        if (!activeFilters.has(p.item.family)) return;
+        const match = !searchTerm || p.item.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const r = (p.item.kind === 'theorem' ? 8 : 6) * p.scale * zoom;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = match ? colors[p.item.family] : 'rgba(255,255,255,0.1)'; ctx.fill();
+        if (hoveredNode === p.index) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); }
+      });
+    }
+
+    function findNodeAt(x, y) {
+      const items = bermudaProofsData.items;
+      const projected = items.map((item, i) => ({ ...project(item.pos.x, item.pos.y, item.pos.z), item, index: i })).sort((a, b) => b.z - a.z);
+      for (const p of projected) {
+        if (!activeFilters.has(p.item.family)) continue;
+        const r = (p.item.kind === 'theorem' ? 8 : 6) * p.scale * zoom;
+        if ((x - p.x) ** 2 + (y - p.y) ** 2 <= r * r) return p.index;
+      }
+      return null;
+    }
+
+    canvas.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; autoRotate = false; document.getElementById('autoRotateBtn').classList.remove('active'); });
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+      if (isDragging) { rotationY += (e.clientX - lastX) * 0.01; rotationX += (e.clientY - lastY) * 0.01; lastX = e.clientX; lastY = e.clientY; draw(); }
+      else {
+        const idx = findNodeAt(x, y);
+        if (idx !== hoveredNode) { hoveredNode = idx; draw(); }
+        if (idx !== null) {
+          const item = bermudaProofsData.items[idx];
+          tooltip.style.display = 'block'; tooltip.style.left = (e.clientX + 15) + 'px'; tooltip.style.top = (e.clientY + 15) + 'px';
+          tooltip.querySelector('.tooltip-name').textContent = item.name;
+          tooltip.querySelector('.tooltip-kind').textContent = item.kind;
+          tooltip.querySelector('.tooltip-family').textContent = item.family;
+        } else tooltip.style.display = 'none';
+      }
+    });
+    canvas.addEventListener('mouseup', () => isDragging = false);
+    canvas.addEventListener('mouseleave', () => { isDragging = false; tooltip.style.display = 'none'; hoveredNode = null; draw(); });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); zoom *= e.deltaY > 0 ? 0.95 : 1.05; zoom = Math.max(0.5, Math.min(3, zoom)); draw(); });
+
+    function resetView() { rotationX = 0.3; rotationY = 0.5; zoom = 1; draw(); }
+    function toggleEdges() { showEdges = !showEdges; draw(); }
+    function toggleAutoRotate() { autoRotate = !autoRotate; document.getElementById('autoRotateBtn').classList.toggle('active', autoRotate); }
+    function animate() { if (autoRotate) { rotationY += 0.005; draw(); } requestAnimationFrame(animate); }
+
+    function buildLegend() {
+      const legend = document.getElementById('legend');
+      [...new Set(bermudaProofsData.items.map(i => i.family))].forEach(family => {
+        const div = document.createElement('div');
+        div.className = 'legend-item';
+        div.innerHTML = `<div class="legend-dot" style="background:${colors[family]}"></div><span>${family}</span>`;
+        div.addEventListener('click', () => {
+          activeFilters.has(family) ? (activeFilters.delete(family), div.classList.add('inactive')) : (activeFilters.add(family), div.classList.remove('inactive'));
+          draw();
+        });
+        legend.appendChild(div);
+      });
+    }
+
+    function updateStats() {
+      document.getElementById('stat-decls').textContent = bermudaProofsData.items.length;
+      document.getElementById('stat-edges').textContent = bermudaProofsData.edges.length;
+      document.getElementById('stat-modules').textContent = new Set(bermudaProofsData.items.map(i => i.family)).size;
+    }
+
+    document.getElementById('search').addEventListener('input', e => { searchTerm = e.target.value; draw(); });
+    window.addEventListener('resize', resize);
+    resize(); buildLegend(); updateStats(); animate();
+  </script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 node_modules/
+# Ignore build artifacts but not RESEARCHER_BUNDLE visualizations
 artifacts/
+!RESEARCHER_BUNDLE/artifacts/
 cache/
 dist/
 build/
