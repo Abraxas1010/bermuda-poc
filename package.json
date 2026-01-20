@@ -1,0 +1,22 @@
+{
+  "name": "bermuda-poc-standalone",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shielded compliance transfer POC (Bermuda-style rules)",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "compile:circuits": "./scripts/compile-circuits.sh",
+    "build:verifiers": "node scripts/build-verifiers.js",
+    "test": "npx hardhat test"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "hardhat": "^2.22.19",
+    "snarkjs": "^0.7.4"
+  }
+}
